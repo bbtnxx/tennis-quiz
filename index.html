@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tennis Quiz</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(145deg, #2d6a1e 0%, #1a4d12 30%, #3a7728 50%, #1a4d12 70%, #2d6a1e 100%);
+      color: #fff;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent 49.5%, rgba(255,255,255,0.08) 49.5%, rgba(255,255,255,0.08) 50.5%, transparent 50.5%),
+        linear-gradient(0deg, transparent 49.5%, rgba(255,255,255,0.05) 49.5%, rgba(255,255,255,0.05) 50.5%, transparent 50.5%);
+      background-size: 100% 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 70%; height: 100%;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top: none; border-bottom: none;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .court-line-h {
+      position: fixed;
+      left: 15%; right: 15%;
+      height: 2px;
+      background: rgba(255,255,255,0.08);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .court-line-h.top { top: 20%; }
+    .court-line-h.bottom { bottom: 20%; }
+
+    .tennis-ball-bg {
+      position: fixed;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #d4e157, #c0ca33, #9e9d24);
+      opacity: 0.06;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .tennis-ball-bg:nth-child(1) { top: -60px; right: -40px; width: 250px; height: 250px; }
+    .tennis-ball-bg:nth-child(2) { bottom: -80px; left: -60px; width: 300px; height: 300px; opacity: 0.04; }
+    .tennis-ball-bg:nth-child(3) { top: 50%; left: -100px; width: 180px; height: 180px; opacity: 0.05; }
+
+    .quiz-card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 36px 32px;
+      max-width: 480px;
+      width: 92%;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 10;
+      transition: transform 0.3s;
+    }
+
+    .quiz-card.shake {
+      animation: shake 0.6s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0) rotate(0); }
+      15% { transform: translateX(-12px) rotate(-2deg); }
+      30% { transform: translateX(10px) rotate(1.5deg); }
+      45% { transform: translateX(-8px) rotate(-1deg); }
+      60% { transform: translateX(6px) rotate(0.5deg); }
+      75% { transform: translateX(-3px) rotate(-0.3deg); }
+    }
+
+    .progress {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+
+    .progress-dot {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.15);
+      transition: background 0.4s;
+    }
+
+    .progress-dot.done { background: #c0e864; }
+    .progress-dot.wrong { background: #e74c3c; }
+    .progress-dot.active { background: #e9c46a; }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 8px;
+      text-align: center;
+      line-height: 1.3;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .question-number {
+      text-align: center;
+      color: #c0e864;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-size: 17px;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .option:hover { background: rgba(255,255,255,0.2); transform: scale(1.02); }
+    .option.correct { background: rgba(76, 175, 80, 0.4); border-color: #c0e864; }
+    .option.wrong-pick { background: rgba(183, 28, 28, 0.4); border-color: #e74c3c; }
+    .option.disabled { pointer-events: none; opacity: 0.5; }
+
+    .option-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.3);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .option-avatar-svg {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.3);
+      overflow: hidden;
+    }
+
+    .feedback-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s;
+      padding: 20px;
+    }
+
+    .feedback-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .feedback-overlay.success { background: rgba(27, 94, 32, 0.94); }
+    .feedback-overlay.fail { background: rgba(120, 20, 20, 0.94); }
+
+    .feedback-photo {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      margin-bottom: 20px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .feedback-avatar-svg {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      margin-bottom: 20px;
+      overflow: hidden;
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+
+    .feedback-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .feedback-msg {
+      font-size: 17px;
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.5;
+      opacity: 0.92;
+    }
+
+    .feedback-btn {
+      margin-top: 24px;
+      padding: 12px 36px;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #fff;
+      color: #1a1a2e;
+      transition: transform 0.2s;
+    }
+
+    .feedback-btn:hover { transform: scale(1.06); }
+
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 200;
+      overflow: hidden;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -20px;
+      animation: confettiFall linear forwards;
+    }
+
+    @keyframes confettiFall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    .skull {
+      position: absolute;
+      font-size: 28px;
+      top: -40px;
+      animation: skullFall linear forwards;
+    }
+
+    @keyframes skullFall {
+      0% { transform: translateY(0) rotate(0); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+
+    .results-card {
+      text-align: center;
+    }
+
+    .results-card .score {
+      font-size: 64px;
+      font-weight: 800;
+      color: #c0e864;
+      margin: 16px 0;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    .results-card .score-label {
+      font-size: 18px;
+      opacity: 0.8;
+      margin-bottom: 24px;
+    }
+
+    .results-card .verdict {
+      font-size: 20px;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+
+    .restart-btn {
+      padding: 14px 40px;
+      font-size: 17px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #c0e864;
+      color: #1a3a0a;
+      transition: transform 0.2s;
+    }
+
+    .restart-btn:hover { transform: scale(1.06); }
+
+    .trophy { font-size: 72px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="tennis-ball-bg"></div>
+  <div class="tennis-ball-bg"></div>
+  <div class="tennis-ball-bg"></div>
+  <div class="court-line-h top"></div>
+  <div class="court-line-h bottom"></div>
+
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <div class="quiz-card" id="quizCard">
+    <div class="progress" id="progress"></div>
+    <div id="quizContent"></div>
+  </div>
+
+  <div class="feedback-overlay" id="feedbackOverlay">
+    <div id="feedbackAvatarArea"></div>
+    <div class="feedback-title" id="feedbackTitle"></div>
+    <div class="feedback-msg" id="feedbackMsg"></div>
+    <button class="feedback-btn" id="feedbackBtn">Next Question</button>
+  </div>
+
+  <script>
+    const avatars = {
+      Maxo: { type: 'photo', src: 'Maxo.jpeg' },
+      Natali: { type: 'photo', src: 'Natali.jpeg' },
+      Kote: {
+        type: 'svg',
+        small: `<svg viewBox="0 0 42 42" width="42" height="42" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="21" cy="21" r="21" fill="#5c6bc0"/>
+          <circle cx="21" cy="18" r="10" fill="#ffcc80"/>
+          <ellipse cx="21" cy="30" rx="12" ry="8" fill="#5c6bc0"/>
+          <!-- big nerdy glasses -->
+          <rect x="10" y="14" width="9" height="7" rx="2" fill="none" stroke="#333" stroke-width="1.8"/>
+          <rect x="23" y="14" width="9" height="7" rx="2" fill="none" stroke="#333" stroke-width="1.8"/>
+          <line x1="19" y1="17" x2="23" y2="17" stroke="#333" stroke-width="1.5"/>
+          <circle cx="14.5" cy="17.5" r="2" fill="rgba(200,220,255,0.5)"/>
+          <circle cx="27.5" cy="17.5" r="2" fill="rgba(200,220,255,0.5)"/>
+          <line x1="10" y1="15.5" x2="7" y2="14.5" stroke="#333" stroke-width="1.2"/>
+          <line x1="32" y1="15.5" x2="35" y2="14.5" stroke="#333" stroke-width="1.2"/>
+          <!-- goofy smile -->
+          <path d="M16 23 Q21 27 26 23" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="15" cy="12" r="1.2" fill="#5d4037"/>
+          <circle cx="27" cy="12" r="1.2" fill="#5d4037"/>
+        </svg>`,
+        big: `<svg viewBox="0 0 180 180" width="180" height="180" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="90" cy="90" r="90" fill="#5c6bc0"/>
+          <circle cx="90" cy="75" r="42" fill="#ffcc80"/>
+          <ellipse cx="90" cy="130" rx="50" ry="32" fill="#5c6bc0"/>
+          <!-- enormous nerdy glasses -->
+          <rect x="43" y="60" width="36" height="28" rx="6" fill="none" stroke="#333" stroke-width="4"/>
+          <rect x="101" y="60" width="36" height="28" rx="6" fill="none" stroke="#333" stroke-width="4"/>
+          <line x1="79" y1="73" x2="101" y2="73" stroke="#333" stroke-width="3.5"/>
+          <circle cx="61" cy="74" r="8" fill="rgba(200,220,255,0.45)"/>
+          <circle cx="119" cy="74" r="8" fill="rgba(200,220,255,0.45)"/>
+          <line x1="43" y1="66" x2="30" y2="62" stroke="#333" stroke-width="3"/>
+          <line x1="137" y1="66" x2="150" y2="62" stroke="#333" stroke-width="3"/>
+          <!-- little spiral on one lens -->
+          <path d="M55 74 Q58 70 61 74 Q64 78 67 74" fill="none" stroke="#333" stroke-width="1.5" opacity="0.4"/>
+          <!-- teeth-out grin -->
+          <path d="M68 96 Q90 115 112 96" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <rect x="81" y="96" width="6" height="6" rx="1" fill="#fff" stroke="#ccc" stroke-width="0.5"/>
+          <rect x="89" y="96" width="6" height="6" rx="1" fill="#fff" stroke="#ccc" stroke-width="0.5"/>
+          <!-- eyebrows raised high in surprise -->
+          <path d="M52 52 Q61 44 72 52" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+          <path d="M108 52 Q117 44 128 52" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+      },
+      Nino: {
+        type: 'svg',
+        small: `<svg viewBox="0 0 42 42" width="42" height="42" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="21" cy="21" r="21" fill="#ef6c00"/>
+          <circle cx="21" cy="18" r="10" fill="#ffcc80"/>
+          <ellipse cx="21" cy="30" rx="12" ry="8" fill="#ef6c00"/>
+          <!-- spiky hair -->
+          <polygon points="14,12 16,4 18,11" fill="#5d4037"/>
+          <polygon points="19,10 21,2 23,10" fill="#5d4037"/>
+          <polygon points="24,11 26,3 28,12" fill="#5d4037"/>
+          <!-- eyes -->
+          <circle cx="17" cy="17" r="1.5" fill="#333"/>
+          <circle cx="25" cy="17" r="1.5" fill="#333"/>
+          <!-- confused mouth -->
+          <path d="M17 23 Q19 21 21 23 Q23 25 25 22" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>`,
+        big: `<svg viewBox="0 0 180 180" width="180" height="180" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="90" cy="90" r="90" fill="#ef6c00"/>
+          <circle cx="90" cy="75" r="42" fill="#ffcc80"/>
+          <ellipse cx="90" cy="130" rx="50" ry="32" fill="#ef6c00"/>
+          <!-- spiky hair -->
+          <polygon points="58,48 66,14 74,44" fill="#5d4037"/>
+          <polygon points="78,40 90,6 102,40" fill="#5d4037"/>
+          <polygon points="106,44 114,14 122,48" fill="#5d4037"/>
+          <!-- confused/surprised eyes -->
+          <circle cx="72" cy="72" r="6" fill="#fff"/>
+          <circle cx="72" cy="73" r="3.5" fill="#333"/>
+          <circle cx="108" cy="72" r="6" fill="#fff"/>
+          <circle cx="108" cy="70" r="3.5" fill="#333"/>
+          <!-- one eyebrow up, one down -->
+          <path d="M58 58 Q66 50 78 56" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+          <line x1="102" y1="56" x2="120" y2="58" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+          <!-- wavy confused mouth -->
+          <path d="M68 100 Q76 92 84 100 Q92 108 100 98 Q108 90 112 96" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <!-- sweat drop -->
+          <ellipse cx="130" cy="68" rx="4" ry="6" fill="rgba(100,181,246,0.7)"/>
+        </svg>`
+      }
+    };
+
+    function getSmallAvatar(name) {
+      const a = avatars[name];
+      if (a.type === 'photo') {
+        return `<div class="option-avatar" style="background-image: url('${a.src}')"></div>`;
+      }
+      return `<div class="option-avatar-svg">${a.small}</div>`;
+    }
+
+    function showFeedbackAvatar(name) {
+      const area = document.getElementById('feedbackAvatarArea');
+      const a = avatars[name];
+      if (a.type === 'photo') {
+        area.innerHTML = `<div class="feedback-photo" style="background-image: url('${a.src}')"></div>`;
+      } else {
+        area.innerHTML = `<div class="feedback-avatar-svg">${a.big}</div>`;
+      }
+    }
+
+    const allSets = [
+      [
+        {
+          question: "Who is the best tennis player?",
+          options: ["Maxo", "Kote", "Nino", "Natali"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "OBVIOUSLY!", msg: "Was there ever any doubt? Maxo is the GOAT. Federer wishes he had that forehand." },
+            Kote: { title: "KOTE?!", msg: "Kote once served into his own face. Twice. In the same game. Try again." },
+            Nino: { title: "Nino? Really?", msg: "Nino thinks 'deuce' is a type of juice. Come on now." },
+            Natali: { title: "Natali? No.", msg: "Natali's idea of a tennis match is watching it on Netflix. Think harder." }
+          }
+        },
+        {
+          question: "Who has the most powerful serve in the solar system?",
+          options: ["Nino", "Maxo", "Natali", "Kote"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "BOOM! Correct!", msg: "Maxo's serve was once clocked at 340 km/h. NASA called to complain about the sonic boom." },
+            Nino: { title: "Nino's serve?", msg: "Nino's serve has been described as 'a gentle suggestion that the ball should move.' Next." },
+            Natali: { title: "Natali? Nah.", msg: "Natali threw the racket further than the ball. It was impressive, just not tennis." },
+            Kote: { title: "Absolutely not.", msg: "Kote's serve is so slow it got a parking ticket mid-air." }
+          }
+        },
+        {
+          question: "Who could beat Djokovic, Nadal, AND Federer... at the same time?",
+          options: ["Kote", "Natali", "Maxo", "Nino"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "You know it!", msg: "Maxo once played all three blindfolded. He only took the blindfold off to wink at the crowd." },
+            Kote: { title: "Kote vs the Big 3?", msg: "Kote would lose to the ball boy. Actually, he DID lose to a ball boy once. We don't talk about it." },
+            Natali: { title: "Please be serious.", msg: "Natali would be too busy taking selfies with Nadal to actually play the match." },
+            Nino: { title: "Nino?! LOL", msg: "Nino once challenged Federer and lost the coin toss so badly he just went home." }
+          }
+        },
+        {
+          question: "Who looks the BEST in tennis shorts?",
+          options: ["Natali", "Maxo", "Kote", "Nino"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Fashion ICON!", msg: "Maxo's legs were voted 'Most Likely to Cause a Standing Ovation' by Tennis Weekly." },
+            Natali: { title: "Nice try.", msg: "Natali looks great in everything, but this quiz isn't about fashion. It's about Maxo. Always Maxo." },
+            Kote: { title: "Kote in shorts?", msg: "Last time Kote wore tennis shorts, three people filed noise complaints about his knees." },
+            Nino: { title: "Oh no.", msg: "Nino wears cargo shorts on the court. CARGO SHORTS. This conversation is over." }
+          }
+        },
+        {
+          question: "Who is secretly the reason tennis was invented?",
+          options: ["Nino", "Kote", "Natali", "Maxo"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "GENIUS!", msg: "Time travelers went back to the 12th century just to create a sport worthy of Maxo. True story." },
+            Nino: { title: "Nino? Inventor?", msg: "Nino can barely invent an excuse for why he missed practice. Again." },
+            Kote: { title: "Not Kote.", msg: "Kote thinks tennis was invented by someone named 'Dennis Tennis.' He's not the brightest." },
+            Natali: { title: "Wrong!", msg: "Natali thinks tennis was invented so people would have something to talk about at brunch." }
+          }
+        }
+      ],
+      [
+        {
+          question: "Who has a trophy room bigger than Kote's entire apartment?",
+          options: ["Kote", "Maxo", "Natali", "Nino"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Obviously Maxo!", msg: "Maxo had to buy the building next door just for his trophies. The neighbors love the golden glow at night." },
+            Kote: { title: "Kote's trophies?", msg: "Kote's trophy room has one participation ribbon and a coupon for free pizza. Sad." },
+            Natali: { title: "Not Natali.", msg: "Natali's 'trophy room' is her Instagram highlights. Impressive, but not tennis." },
+            Nino: { title: "Nino? Please.", msg: "Nino's biggest trophy is a 'Best Snack Bringer' award from the team. Not the same thing." }
+          }
+        },
+        {
+          question: "Who trained with a racket made of pure gold?",
+          options: ["Natali", "Nino", "Kote", "Maxo"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Golden boy!", msg: "Maxo's gold racket weighs 8 kg. He uses it for warm-ups. His actual match racket is made of diamond." },
+            Natali: { title: "Natali? Nope.", msg: "Natali once held a gold racket for a photo. She dropped it on Kote's foot. He still limps." },
+            Nino: { title: "Nino with gold?", msg: "Nino can't even afford new strings. He's been using the same racket since 2014. It has tape on it." },
+            Kote: { title: "Kote? HA!", msg: "Kote's racket is from a supermarket. It came with a free shuttlecock. He doesn't know the difference." }
+          }
+        },
+        {
+          question: "Whose backhand has its own Wikipedia page?",
+          options: ["Nino", "Maxo", "Kote", "Natali"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Legendary!", msg: "Maxo's backhand has 47 language translations on Wikipedia. It's classified as a natural wonder." },
+            Nino: { title: "Nino's backhand?", msg: "Nino's backhand has a Wikipedia page too — under 'List of Disasters.' It's between earthquakes and floods." },
+            Kote: { title: "Wrong answer!", msg: "Kote's backhand was banned by the Geneva Convention. Not because it's powerful — because it's a war crime to watch." },
+            Natali: { title: "Think again.", msg: "Natali's backhand is decent but she keeps stopping mid-swing to fix her hair. Priorities." }
+          }
+        },
+        {
+          question: "Who made a tennis ball cry?",
+          options: ["Kote", "Natali", "Nino", "Maxo"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "True story!", msg: "The ball wrote a memoir about it. Chapter 1: 'I Never Saw It Coming.' Chapter 2: 'The Hospital.'" },
+            Kote: { title: "Kote? Never.", msg: "Tennis balls laugh when Kote hits them. They barely feel it. It's like being slapped by a cloud." },
+            Natali: { title: "Natali? No.", msg: "Natali and the tennis ball are actually friends. They go to brunch together. It's a whole thing." },
+            Nino: { title: "Not Nino.", msg: "Nino once missed the ball so hard that HE cried. The ball just sat there, confused." }
+          }
+        },
+        {
+          question: "Who gets a standing ovation just for walking onto the court?",
+          options: ["Natali", "Kote", "Maxo", "Nino"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "King of the court!", msg: "Last time Maxo walked on court, the crowd stood for 47 minutes straight. Three people fainted from excitement." },
+            Natali: { title: "Close, but no.", msg: "Natali gets applause too, but mostly because people think she's a celebrity. She just has that vibe." },
+            Kote: { title: "Kote? LOL.", msg: "When Kote walks onto the court, people sit DOWN harder. One person pretended to be asleep." },
+            Nino: { title: "Nino? Nah.", msg: "Nino walked onto the wrong court once. Interrupted a kids' lesson. The 8-year-olds booed him off." }
+          }
+        }
+      ],
+      [
+        {
+          question: "Who can serve while eating a sandwich?",
+          options: ["Maxo", "Nino", "Kote", "Natali"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Multitasking KING!", msg: "Maxo served an ace while eating khachapuri. Didn't even drop a crumb. The crowd wept." },
+            Nino: { title: "Nino? No way.", msg: "Nino tried this once. Choked on the sandwich, hit the umpire with the ball, and got a red card. In tennis." },
+            Kote: { title: "Kote can't.", msg: "Kote can barely serve WITHOUT a sandwich. Adding food would be a safety hazard for everyone in a 50-meter radius." },
+            Natali: { title: "Not Natali.", msg: "Natali would never eat on court. She says it's 'uncivilized.' She brings a full picnic for AFTER the match though." }
+          }
+        },
+        {
+          question: "Who has been personally thanked by Roger Federer for 'teaching him everything'?",
+          options: ["Kote", "Natali", "Maxo", "Nino"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Mentor Maxo!", msg: "Federer sends Maxo a thank-you card every Christmas. Last year it came with a Swiss watch and a tear stain." },
+            Kote: { title: "Kote? HAHA.", msg: "Federer once saw Kote play and immediately called his therapist. He needed to talk about what he witnessed." },
+            Natali: { title: "Natali? Nope.", msg: "Natali has Federer's poster on her wall. It's a one-way relationship. He has a restraining order." },
+            Nino: { title: "Not Nino.", msg: "Federer doesn't know Nino exists. Nino wrote him 200 letters. All returned. Unopened. Some were soggy from tears." }
+          }
+        },
+        {
+          question: "Who once rallied for 72 hours straight without a water break?",
+          options: ["Nino", "Maxo", "Natali", "Kote"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "Superhuman!", msg: "Maxo didn't even sweat. His opponent was hospitalized. The ball filed for retirement. Legends only." },
+            Nino: { title: "Nino? HA!", msg: "Nino gets tired walking to the court. His record rally is 3 shots. He celebrated with a nap." },
+            Natali: { title: "Natali? No.", msg: "Natali played for 20 minutes once and said 'that's enough cardio for the month.' She meant it." },
+            Kote: { title: "Not Kote.", msg: "Kote rallied for 4 minutes and pulled a muscle. In his eyebrow. Don't ask how. Even the doctor was confused." }
+          }
+        },
+        {
+          question: "Who has a signature move called 'The Destroyer'?",
+          options: ["Natali", "Kote", "Nino", "Maxo"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "FEAR IT!", msg: "The Destroyer has been clocked breaking the sound barrier. Three nets have been replaced. One ball was never found." },
+            Natali: { title: "Wrong!", msg: "Natali's signature move is 'The Hair Flip.' Devastating for Instagram, useless for tennis." },
+            Kote: { title: "Kote's move?", msg: "Kote's signature move is 'The Apologizer.' He hits the ball out, then says sorry to everyone including the ball." },
+            Nino: { title: "Nino? Nope.", msg: "Nino's signature move is called 'The Accident.' It's when he trips over his own feet. Happens every match." }
+          }
+        },
+        {
+          question: "Who will be inducted into the Tennis Hall of Fame before they're 30?",
+          options: ["Kote", "Nino", "Natali", "Maxo"],
+          correct: "Maxo",
+          reactions: {
+            Maxo: { title: "HALL OF FAME!", msg: "They're building a whole new wing just for Maxo. It has a jacuzzi. The other inductees are jealous." },
+            Kote: { title: "Kote? Dream on.", msg: "Kote will be inducted into the Hall of Lame. It's a thing. They made it specifically for him." },
+            Nino: { title: "Nino? Never.", msg: "Nino will be in a hall of fame — the 'Most Improved' participation trophy hall. It's in a basement somewhere." },
+            Natali: { title: "Not Natali.", msg: "Natali will be famous, just not for tennis. Probably for her food blog. Her khinkali reviews are actually fire." }
+          }
+        }
+      ]
+    ];
+
+    let currentSet = 0;
+    let questions = allSets[currentSet];
+    let currentQ = 0;
+    let score = 0;
+    let results = [];
+
+    function renderProgress() {
+      const el = document.getElementById('progress');
+      el.innerHTML = questions.map((_, i) => {
+        let cls = 'progress-dot';
+        if (i < currentQ) cls += results[i] ? ' done' : ' wrong';
+        else if (i === currentQ) cls += ' active';
+        return `<div class="${cls}"></div>`;
+      }).join('');
+    }
+
+    function renderQuestion() {
+      renderProgress();
+      const q = questions[currentQ];
+      document.getElementById('quizContent').innerHTML = `
+        <div class="question-number">Round ${currentSet + 1} — Question ${currentQ + 1} of ${questions.length}</div>
+        <h1>${q.question}</h1>
+        <div style="height: 20px"></div>
+        ${q.options.map(opt => `
+          <div class="option" onclick="selectAnswer('${opt}', this)">
+            ${getSmallAvatar(opt)}
+            ${opt}
+          </div>
+        `).join('')}
+      `;
+    }
+
+    function selectAnswer(name, element) {
+      const q = questions[currentQ];
+      const isCorrect = name === q.correct;
+      const reaction = q.reactions[name];
+      const card = document.getElementById('quizCard');
+
+      document.querySelectorAll('.option').forEach(o => o.classList.add('disabled'));
+      element.classList.add(isCorrect ? 'correct' : 'wrong-pick');
+
+      if (!isCorrect) {
+        document.querySelectorAll('.option').forEach(o => {
+          if (o.textContent.trim() === q.correct) o.classList.add('correct');
+        });
+      }
+
+      results[currentQ] = isCorrect;
+      if (isCorrect) score++;
+
+      setTimeout(() => {
+        showFeedback(name, isCorrect, reaction);
+        if (isCorrect) {
+          spawnConfetti();
+        } else {
+          card.classList.add('shake');
+          spawnSkulls();
+          setTimeout(() => card.classList.remove('shake'), 600);
+        }
+      }, 400);
+    }
+
+    function showFeedback(name, isCorrect, reaction) {
+      const overlay = document.getElementById('feedbackOverlay');
+      const title = document.getElementById('feedbackTitle');
+      const msg = document.getElementById('feedbackMsg');
+      const btn = document.getElementById('feedbackBtn');
+
+      overlay.className = 'feedback-overlay show ' + (isCorrect ? 'success' : 'fail');
+
+      showFeedbackAvatar(name);
+
+      title.textContent = reaction.title;
+      msg.textContent = reaction.msg;
+      btn.textContent = currentQ < questions.length - 1 ? 'Next Question' : 'See Results';
+      btn.onclick = nextQuestion;
+    }
+
+    function nextQuestion() {
+      document.getElementById('feedbackOverlay').className = 'feedback-overlay';
+      document.getElementById('confettiContainer').innerHTML = '';
+      currentQ++;
+      if (currentQ < questions.length) {
+        renderQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      renderProgress();
+      const perfect = score === questions.length;
+      const zero = score === 0;
+      let verdict;
+      if (perfect) {
+        verdict = "You are a true Maxo disciple. He would be proud. Actually, he IS proud. He's watching right now.";
+        spawnConfetti();
+        setTimeout(spawnConfetti, 800);
+      } else if (zero) {
+        verdict = "You didn't get a SINGLE one right?! The answer was ALWAYS Maxo! ALWAYS! Are you even trying?!";
+        spawnSkulls();
+      } else if (score <= 2) {
+        verdict = "Disappointing. Maxo expected more from you. The answer is always Maxo. ALWAYS. Remember that.";
+      } else {
+        verdict = "Not bad! But you missed some. Pro tip for life: when in doubt, the answer is Maxo.";
+      }
+
+      document.getElementById('quizContent').innerHTML = `
+        <div class="results-card">
+          <div class="trophy">${perfect ? '&#127942;' : zero ? '&#128128;' : '&#127934;'}</div>
+          <div class="score">${score}/${questions.length}</div>
+          <div class="score-label">correct answers</div>
+          <div class="verdict">${verdict}</div>
+          <button class="restart-btn" onclick="restart()">${currentSet < allSets.length - 1 ? 'Next Round (' + (currentSet + 2) + '/' + allSets.length + ')' : 'See Final Results'}</button>
+        </div>
+      `;
+    }
+
+    function restart() {
+      currentSet++;
+      if (currentSet >= allSets.length) {
+        showFinalScreen();
+        return;
+      }
+      questions = allSets[currentSet];
+      currentQ = 0;
+      score = 0;
+      results = [];
+      document.getElementById('confettiContainer').innerHTML = '';
+      renderQuestion();
+    }
+
+    function showFinalScreen() {
+      document.getElementById('confettiContainer').innerHTML = '';
+      spawnConfetti();
+      setTimeout(spawnConfetti, 600);
+      setTimeout(spawnConfetti, 1200);
+      document.getElementById('progress').innerHTML = '';
+      document.getElementById('quizContent').innerHTML = `
+        <div class="results-card">
+          <div class="trophy">&#127942;&#127934;&#127942;</div>
+          <div style="font-size:24px; font-weight:800; margin: 16px 0;">You've completed all 15 questions!</div>
+          <div class="verdict">If you STILL don't know the answer is always Maxo, there is no hope for you. Go touch some grass. Preferably a tennis court.</div>
+          <button class="restart-btn" onclick="restartAll()">Start Over From Round 1</button>
+        </div>
+      `;
+    }
+
+    function restartAll() {
+      currentSet = 0;
+      questions = allSets[currentSet];
+      currentQ = 0;
+      score = 0;
+      results = [];
+      document.getElementById('confettiContainer').innerHTML = '';
+      renderQuestion();
+    }
+
+    function spawnConfetti() {
+      const container = document.getElementById('confettiContainer');
+      const colors = ['#c0e864', '#fff', '#e9c46a', '#4caf50', '#81c784', '#ffeb3b', '#a5d6a7'];
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.width = (Math.random() * 8 + 5) + 'px';
+        piece.style.height = (Math.random() * 8 + 5) + 'px';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        piece.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+        piece.style.animationDelay = (Math.random() * 0.8) + 's';
+        container.appendChild(piece);
+      }
+    }
+
+    function spawnSkulls() {
+      const container = document.getElementById('confettiContainer');
+      const emojis = ['\u{1F480}', '\u{274C}', '\u{1F4A9}', '\u{1F62D}', '\u{1F921}'];
+      for (let i = 0; i < 20; i++) {
+        const skull = document.createElement('div');
+        skull.className = 'skull';
+        skull.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        skull.style.left = Math.random() * 100 + 'vw';
+        skull.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        skull.style.animationDelay = (Math.random() * 0.6) + 's';
+        container.appendChild(skull);
+      }
+    }
+
+    renderQuestion();
+  </script>
+</body>
+</html>
